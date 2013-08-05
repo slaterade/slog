@@ -1,0 +1,4 @@
+slog
+====
+
+simple log
