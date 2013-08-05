@@ -5,13 +5,16 @@
 
 int main( int argc, char* argv[] ) {
 
-	slog::log_splitter splitter( std::cout, "cout-intercept-log.txt" );
-	slog::out( "global_out_log.txt", true );
-
+	slog::snooper snoop( std::cout, "cout-intercept-log.txt" );
 	std::cout << "Hello from slog. Your friendly neighborhood simple logger.";
 
-	slog::out() << "Using the log_splitter object directly is probably not what you want";
-	slog::out() << "Instead, use this handy thread-safe global log function";
+	slog::init();
+	slog::out() << "Using the log_splitter object directly is probably not what you want " << 42 << ", alue";
+	slog::out() << "Instead, use this handy global log function";
+
+	slog::logger test_logger;
+	test_logger.init( "test_logger.txt" );
+	slog::out( test_logger ) << "blah";
 
 	return 0;
 }
