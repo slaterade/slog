@@ -2,7 +2,7 @@
 
 SHELL = /bin/sh
 CXX = g++
-FLAGS = -std=c++11 -stdlib=libc++
+FLAGS = -std=c++11
 CXXFLAGS = -Wall
 
 TARGET = slog
