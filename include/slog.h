@@ -26,6 +26,10 @@
 #include <sstream>
 #include <fstream>
 #include <mutex>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
 
 namespace slog {
 
@@ -41,30 +45,31 @@ public:
 
 	/// @param[in] stream a stringstream containing the message to log
 	void capture( std::ostringstream& stream ) {
-		std::string timestamp = "";
-		if ( m_is_timestamp_enabled ) {
-			timestamp = create_timestamp();
-		}
-
+		std::string timestamp = create_timestamp();
 		std::lock_guard<std::mutex> lock( m_log_mutex );
 		if ( m_log_file.good() ) {
 			m_log_file << timestamp << stream.str() << "\n";
 		}
 	}
 	
-	/// @param[in] is_timestamp_enabled set true if a timestamp should be attached to each message
-	void enable_timestamp( bool is_timestamp_enabled = true ) {
-		m_is_timestamp_enabled = is_timestamp_enabled;
+	void set_timestamp_format( const std::string& timestamp_format ) {
+		m_timestamp_format = timestamp_format;
 	}
 
 private:
 	std::string create_timestamp() {
-		return "[timestamp] ";
+		if ( m_timestamp_format.empty() ) {
+			return "";
+		}
+		std::time_t now_c = std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() );
+		std::stringstream ss;
+		ss << "[" << std::put_time( std::localtime( &now_c ), m_timestamp_format.c_str() ) << "] ";
+		return ss.str();
 	}
 
-	bool m_is_timestamp_enabled;
 	std::ofstream m_log_file;
 	std::mutex m_log_mutex;
+	std::string m_timestamp_format;
 };
 
 /// acts as a stream to capture a log message
@@ -126,6 +131,13 @@ message out( logger& the_logger = global_logger::get() ) {
 /// @param[in] the_logger logger object to initialize
 void init( const std::string& log_file_name = "slog.txt", logger& the_logger = global_logger::get() ) {
 	the_logger.init( log_file_name );
+}
+
+static const std::string format_date_plus_time = "%Y-%m-%d %H:%M:%S";
+static const std::string format_time_only = "%H:%M:%S";
+
+void set_timestamp_format( const std::string& format = format_date_plus_time, logger& the_logger = global_logger::get() ) {
+	the_logger.set_timestamp_format( format );
 }
 
 /// ever wanted to redirect std::cout to a log file? well this is the class for you.
