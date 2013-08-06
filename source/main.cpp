@@ -10,7 +10,7 @@ int main( int argc, char* argv[] ) {
 
 	slog::init();
 	slog::out() << "Using the log_splitter object directly is probably not what you want " << 42 << ", alue";
-	slog::out() << "Instead, use this handy global log function";
+	slog::out() << "Instead, use this handy global log function" << std::endl;
 
 	slog::logger test_logger;
 	test_logger.init( "test_logger.txt" );

@@ -1,27 +1,23 @@
-// Copyright (c) 2013, Richard Slater
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//     * Redistributions of source code must retain the above copyright
-//       notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above copyright
-//       notice, this list of conditions and the following disclaimer in the
-//       documentation and/or other materials provided with the distribution.
-//     * Neither the name of the <organization> nor the
-//       names of its contributors may be used to endorse or promote products
-//       derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// The MIT License (MIT)
+
+// Copyright (c) 2013 Richard Slater
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in
+// the Software without restriction, including without limitation the rights to
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+// the Software, and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+// FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef SLOG_H_INCLUDED
 #define SLOG_H_INCLUDED
@@ -37,11 +33,14 @@ namespace slog {
 class logger {
 public:
 
+	/// open a log file for output
+	/// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
 	void init( const std::string& log_file_name ) {
 		m_log_file.open( log_file_name.c_str(), std::ios::trunc | std::ios::out );
 	}
 
-	void capture( std::ostringstream& buf ) {
+	/// @param[in] stream a stringstream containing the message to log
+	void capture( std::ostringstream& stream ) {
 		std::string timestamp = "";
 		if ( m_is_timestamp_enabled ) {
 			timestamp = create_timestamp();
@@ -49,10 +48,11 @@ public:
 
 		std::lock_guard<std::mutex> lock( m_log_mutex );
 		if ( m_log_file.good() ) {
-			m_log_file << timestamp << buf.str() << "\n";
+			m_log_file << timestamp << stream.str() << "\n";
 		}
 	}
-
+	
+	/// @param[in] is_timestamp_enabled set true if a timestamp should be attached to each message
 	void enable_timestamp( bool is_timestamp_enabled = true ) {
 		m_is_timestamp_enabled = is_timestamp_enabled;
 	}
@@ -67,21 +67,30 @@ private:
 	std::mutex m_log_mutex;
 };
 
+/// acts as a stream to capture a log message
 class message {
 public:
+
+	/// constructor
+	/// @param[in] owner the logger object which will handle the file i/o
 	message( logger* owner )
 		: m_owner( owner ) {
 	}
 
+	/// move constructor
+	/// @param[in] other the right-hand-side message object to cannibalize
 	message( message&& other )
 		: m_owner( other.m_owner )
 		, m_stream( std::move( other.m_stream ) ) {
 	}
 
+	/// destructor which handles the stream capture
 	~message() {
 		m_owner->capture( m_stream );
 	}
 
+	/// @param[in] value the value to copy into this message
+	/// @returns a stream object necessary for statement chains
 	template <typename T>
 	std::ostringstream& operator<<( const T& value ) {
 		m_stream << value;
@@ -105,13 +114,15 @@ public:
 	}
 };
 
+/// primary function which slog is built around, use this to log your messages
 /// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
 message out( logger& the_logger = global_logger::get() ) {
 	return message( &the_logger );
 }
 
-/// @param[in] log_file_name simple enough, a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
+/// initialize the logging system by setting a output file path
+/// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
 /// @param[in] the_logger logger object to initialize
 void init( const std::string& log_file_name = "slog.txt", logger& the_logger = global_logger::get() ) {
 	the_logger.init( log_file_name );
@@ -120,35 +131,44 @@ void init( const std::string& log_file_name = "slog.txt", logger& the_logger = g
 /// ever wanted to redirect std::cout to a log file? well this is the class for you.
 class snooper : public std::streambuf {
 public:
-	snooper( std::ostream& destination, const std::string& log_file_name )
-		: m_destination( destination.rdbuf() )
+
+	/// constructor
+	/// @param[in] stream_to_watch the stream object to capture, for example std::cout
+	/// @param[in] log_file_name a full file path, e.g. "cout.txt" or "sneaky.log"
+	snooper( std::ostream& stream_to_watch, const std::string& log_file_name )
+		: m_stream_to_watch( stream_to_watch.rdbuf() )
 		, m_log_file( log_file_name.c_str(), std::ios_base::out | std::ios_base::trunc )
 		, m_owner( nullptr )
 		, m_is_good( false ) {
 
 		if ( m_log_file.is_open() ) {
 			m_is_good = true;
-			destination.rdbuf( this );
-			m_owner = &destination;
+			stream_to_watch.rdbuf( this );
+			m_owner = &stream_to_watch;
 		}
 	}
-
+	
+	/// destructor
 	~snooper() {
 		if ( m_owner != nullptr ) {
-			m_owner->rdbuf( m_destination );
+			m_owner->rdbuf( m_stream_to_watch );
 		}
 	}
 
 protected:
-	int overflow( int ch ) {
+
+	/// override of base class virtual function, this is where the stream is watched
+	/// @param[in] character a single character "to be put"
+	/// @returns the input character if successful
+	int overflow( int character ) {
 		if ( m_is_good ) {
-			m_log_file.rdbuf()->sputc( ch );
+			m_log_file.rdbuf()->sputc( character );
 		}
-		return m_destination->sputc( ch );
+		return m_stream_to_watch->sputc( character );
 	}
 
 private:
-	std::streambuf* m_destination;
+	std::streambuf* m_stream_to_watch;
 	std::ofstream m_log_file;
 	std::ostream* m_owner;
 	bool m_is_good;
@@ -156,4 +176,4 @@ private:
 
 } // end of namespace slog
 
-#endif SLOG_H_INCLUDED
+#endif // SLOG_H_INCLUDED
