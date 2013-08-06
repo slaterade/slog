@@ -15,11 +15,12 @@ Perhaps you already have a large project that has many statements that output to
     #include "slog.h"
     
     int main() {
-        // this object will intercept a stream and log it to a file, but don't worry the following statements
-        // will be none the wiser and the console will still see standard output
+        // this object will intercept a stream and log it to a file, but don't worry the following
+        // statements will be none the wiser and the console will still see standard output
         slog::snooper snoop( std::cout, "cout.txt" );     
         
-        std::cout << "Man, I really wish these " << 492 << " console statements were available to parse in a text file.";
+        std::cout << "Man, I really wish these " << 492 << " console statements were available "
+            << 3.14159 << " to parse in a text file.";
         std::cout << "That would be great, but we were told to comb the desert so we're combing it!";
     }
     
