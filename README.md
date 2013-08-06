@@ -33,4 +33,5 @@ compiler requirements
 C++11, tested on the following platforms:
 * Windows 7 using Microsoft Visual Studio Express 2012 for Windows Desktop
 * OSX 10.8.4 using XCode 4.6.3 Command-Line Tools (Apple LLVM 4.2 and clang-425.0.28)
-* Ubuntu Linux 12.04.2 using GCC 4.8
+* (broken) Ubuntu Linux 12.04.2 using GCC 4.8
+    * timestamp not working because gcc has not implemented std::put_time yet, see [here](http://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.200x "gcc status")
