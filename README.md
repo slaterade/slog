@@ -1,7 +1,7 @@
 slog
 ====
 
-Simple C++ log file mechanisms. The "s" could also stand for "stream", "small", or "safe" as in thread-safe.  However, the main purpose of this tiny header file is to drop in a project and start writing logfile messages right away.  Here's a small example:
+Simple C++ log file mechanisms. The "s" could also stand for "stream", "small", or "safe" as in thread-safe.  However, the main purpose of this tiny header file is to drop in a project and start writing logfile messages right away.  Here's an example:
 
     #include "slog.h"
   
