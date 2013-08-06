@@ -156,7 +156,7 @@ App_Data/*.ldf
 # =========================
 # Vim
 # =========================
-*.s[a-w][a-z]
+#*.s[a-w][a-z]
 *.un~
 Session.vim
 .netrwhist
