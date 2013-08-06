@@ -33,6 +33,7 @@
 
 namespace slog {
 
+/// provides synchronization, file access, and timestamp mechanisms for the message class
 class logger {
 public:
 
@@ -66,40 +67,61 @@ private:
 	std::mutex m_log_mutex;
 };
 
-class message : public std::ostringstream {
+class message {
 public:
 	message( logger* owner )
 		: m_owner( owner ) {
 	}
 
+	message( message&& other )
+		: m_owner( other.m_owner )
+		, m_stream( std::move( other.m_stream ) ) {
+	}
+
 	~message() {
-		m_owner->capture( *this );
+		m_owner->capture( m_stream );
+	}
+
+	template <typename T>
+	std::ostringstream& operator<<( const T& value ) {
+		m_stream << value;
+		return m_stream;
 	}
 	
 private:
 	logger* m_owner;
+	std::ostringstream m_stream;
 };
 
+/// exists only to encapsulate a nasty global
 class global_logger {
 public:
+
+	/// singleton accessor
+	/// @returns a reference to the one-and-only global logger instance
 	static logger& get() {
 		static logger singleton;
 		return singleton;
 	}
 };
 
+/// @param[in] the_logger logger object to bind this single function call
+/// @returns a message object to capture a stream log message
 message out( logger& the_logger = global_logger::get() ) {
 	return message( &the_logger );
 }
 
+/// @param[in] log_file_name simple enough, a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
+/// @param[in] the_logger logger object to initialize
 void init( const std::string& log_file_name = "slog.txt", logger& the_logger = global_logger::get() ) {
 	the_logger.init( log_file_name );
 }
 
+/// ever wanted to redirect std::cout to a log file? well this is the class for you.
 class snooper : public std::streambuf {
 public:
 	snooper( std::ostream& destination, const std::string& log_file_name )
-		: m_dest( destination.rdbuf() )
+		: m_destination( destination.rdbuf() )
 		, m_log_file( log_file_name.c_str(), std::ios_base::out | std::ios_base::trunc )
 		, m_owner( nullptr )
 		, m_is_good( false ) {
@@ -113,7 +135,7 @@ public:
 
 	~snooper() {
 		if ( m_owner != nullptr ) {
-			m_owner->rdbuf( m_dest );
+			m_owner->rdbuf( m_destination );
 		}
 	}
 
@@ -122,11 +144,11 @@ protected:
 		if ( m_is_good ) {
 			m_log_file.rdbuf()->sputc( ch );
 		}
-		return m_dest->sputc( ch );
+		return m_destination->sputc( ch );
 	}
 
 private:
-	std::streambuf* m_dest;
+	std::streambuf* m_destination;
 	std::ofstream m_log_file;
 	std::ostream* m_owner;
 	bool m_is_good;
