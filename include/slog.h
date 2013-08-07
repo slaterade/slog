@@ -33,7 +33,7 @@
 
 namespace slog {
 
-static const std::string format_date_plus_time = "%Y-%m-%d_%H-%M-%S";
+static const std::string format_date_plus_time = "[%Y-%m-%d %H:%M:%S] ";
 static const std::string format_time_only = "[%H:%M:%S] ";
 
 /// uses the C library function "strftime" standard format
@@ -93,7 +93,7 @@ public:
 			std::string archive_file_name;
 			std::string extention;
 			remove_extention( m_log_file_name, archive_file_name, extention );
-			archive_file_name += "_" + create_timestamp( format_date_plus_time ) + extention;
+			archive_file_name += "_" + create_timestamp( "%Y-%m-%d_%H-%M-%S" ) + extention;
 			copy_file( m_log_file_name, archive_file_name );
 		}
 	}
@@ -107,14 +107,14 @@ public:
 	}
 
 	/// @param[in] stream a stringstream containing the message to log
-	void capture( std::ostringstream& stream ) {
+	void capture( std::ostringstream& stream, const std::string& context ) {
 		std::string timestamp = create_timestamp( m_timestamp_format );
 		std::lock_guard<std::mutex> lock( m_log_mutex );
 		if ( !m_is_initialized ) {
 			init( m_log_file_name );
 		}
 		if ( m_log_file.good() ) {
-			m_log_file << timestamp << stream.str() << "\n";
+			m_log_file << timestamp << context << stream.str() << "\n";
 		}
 	}
 	
@@ -141,20 +141,22 @@ public:
 
 	/// constructor
 	/// @param[in] owner the logger object which will handle the file i/o
-	message( logger* owner )
-		: m_owner( owner ) {
+	message( logger* owner, const std::string& context = "" )
+		: m_owner( owner )
+		, m_context( context ) {
 	}
 
 	/// move constructor
 	/// @param[in] other the right-hand-side message object to cannibalize
 	message( message&& other )
 		: m_owner( other.m_owner )
+		, m_context( std::move( other.m_context ) )
 		, m_stream( other.m_stream.str() ) {
 	}
 
 	/// destructor which handles the stream capture
 	~message() {
-		m_owner->capture( m_stream );
+		m_owner->capture( m_stream, m_context );
 	}
 
 	/// @param[in] value the value to copy into this message
@@ -168,6 +170,7 @@ public:
 private:
 	logger* m_owner;
 	std::ostringstream m_stream;
+	std::string m_context;
 };
 
 /// exists only to encapsulate a nasty global
@@ -183,67 +186,56 @@ public:
 };
 
 /// primary function which slog is built around, use this to log your messages
-/// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
-message out( logger& the_logger = global_logger::get() ) {
-	return message( &the_logger );
+message out( const std::string& context = "", logger& the_logger = global_logger::get() ) {
+	std::stringstream ss("");
+	if ( !context.empty() ) {
+		ss << "[" << context << "] ";
+	}
+	return message( &the_logger, ss.str() );
 }
 
 /// convenience function which adds "error" context to a log message
-/// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
-message error( logger& the_logger = global_logger::get() ) {
-	auto message = out( the_logger );
-	message << "[error] ";
-	return message;
+message error() {
+	return out( "Error" );
 }
 
 /// convenience function which adds "warning" context to a log message
-/// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
-message warn( logger& the_logger = global_logger::get() ) {
-	auto message = out( the_logger );
-	message << "[warning] ";
-	return message;
+message warn() {
+	return out( "Warning" );
 }
 
 /// convenience function which adds "info" context to a log message
-/// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
-message info( logger& the_logger = global_logger::get() ) {
-	auto message = out( the_logger );
-	message << "[info] ";
-	return message;
+message info() {
+	return out( "Info" );
 }
 
 /// convenience function which adds "debug" context to a log message
-/// @param[in] the_logger logger object to bind this single function call
 /// @returns a message object to capture a stream log message
-message debug( logger& the_logger = global_logger::get() ) {
-	auto message = out( the_logger );
-	message << "[debug] ";
-	return message;
+message debug() {
+	return out( "Debug" );
 }
 
 /// initialize the logging system by setting a output file path
 /// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
-/// @param[in] the_logger logger object to initialize
-void init( const std::string& log_file_name, logger& the_logger = global_logger::get() ) {
-	the_logger.init( log_file_name );
+void init( const std::string& log_file_name ) {
+	global_logger::get().init( log_file_name );
 }
 
 /// uses the C library function "strftime" standard format
 /// @param[in] format string specifiers to format the timestamp
-/// @param[in[ the_logger the logger object which to set
-void set_timestamp_format( const std::string& format = format_time_only, logger& the_logger = global_logger::get() ) {
-	the_logger.set_timestamp_format( format );
+void set_timestamp_format( const std::string& format = format_time_only ) {
+	global_logger::get().set_timestamp_format( format );
 }
 
 /// if enabled, each time the application closes the log file will be saved with a timestamp
 /// @param[in] is_archiving_enabled set to true to enable archiving
 /// @param[in[ the_logger the logger object which to set
-void set_archiving( bool is_archiving_enabled = true, logger& the_logger = global_logger::get() ) {
-	the_logger.set_archiving( is_archiving_enabled );
+void set_archiving( bool is_archiving_enabled = true ) {
+	global_logger::get().set_archiving( is_archiving_enabled );
 }
 
 /// ever wanted to redirect std::cout to a log file? well this is the class for you.

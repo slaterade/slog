@@ -43,7 +43,8 @@ int main( int argc, char* argv[] ) {
 	slog::logger test_logger;
 	test_logger.init( "test_logger.txt" );
 	test_logger.set_timestamp_format( slog::format_date_plus_time );
-	slog::out( test_logger ) << "blah";
+	slog::out( "", test_logger ) << "blah";
+	slog::out( "info", test_logger ) << "advanced " << 41 << " functions.";
 
 	return 0;
 }
