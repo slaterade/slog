@@ -189,6 +189,42 @@ message out( logger& the_logger = global_logger::get() ) {
 	return message( &the_logger );
 }
 
+/// convenience function which adds "error" context to a log message
+/// @param[in] the_logger logger object to bind this single function call
+/// @returns a message object to capture a stream log message
+message error( logger& the_logger = global_logger::get() ) {
+	auto message = out( the_logger );
+	message << "[error] ";
+	return message;
+}
+
+/// convenience function which adds "warning" context to a log message
+/// @param[in] the_logger logger object to bind this single function call
+/// @returns a message object to capture a stream log message
+message warn( logger& the_logger = global_logger::get() ) {
+	auto message = out( the_logger );
+	message << "[warning] ";
+	return message;
+}
+
+/// convenience function which adds "info" context to a log message
+/// @param[in] the_logger logger object to bind this single function call
+/// @returns a message object to capture a stream log message
+message info( logger& the_logger = global_logger::get() ) {
+	auto message = out( the_logger );
+	message << "[info] ";
+	return message;
+}
+
+/// convenience function which adds "debug" context to a log message
+/// @param[in] the_logger logger object to bind this single function call
+/// @returns a message object to capture a stream log message
+message debug( logger& the_logger = global_logger::get() ) {
+	auto message = out( the_logger );
+	message << "[debug] ";
+	return message;
+}
+
 /// initialize the logging system by setting a output file path
 /// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
 /// @param[in] the_logger logger object to initialize

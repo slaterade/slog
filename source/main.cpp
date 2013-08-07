@@ -17,6 +17,11 @@ int main( int argc, char* argv[] ) {
 	slog::out() << "Using the log_splitter object directly is probably not what you want " << 42 << ", alue";
 	slog::out() << "Instead, use this handy global log function" << std::endl;
 
+	slog::info() << "Whaa?";
+	slog::warn() << "Maybe you shoud look at these leaking pipes?";
+	slog::error() << "Mistakes were made.";
+	slog::debug() << "Smarty pants here, everyone, smarty pants over here.";
+
 	// go crazy with some thread action
 	std::vector<std::thread> threads;
 	for ( auto i = 0; i < 50; ++i ) {
