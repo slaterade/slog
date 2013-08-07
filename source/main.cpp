@@ -9,11 +9,11 @@ int main( int argc, char* argv[] ) {
 
 	// capture sneaky cout stuff
 	slog::snooper snoop( std::cout, "cout-intercept-log.txt" );
-	std::cout << "Hello from slog. Your friendly neighborhood simple logger.";
+	std::cout << "Hello from slog. Your friendly neighborhood simple logger." << std::endl;
 
 	// basic interface
-	slog::init();
-	slog::set_timestamp_format( slog::format_time_only );
+	slog::set_timestamp_format();
+	slog::set_archiving();
 	slog::out() << "Using the log_splitter object directly is probably not what you want " << 42 << ", alue";
 	slog::out() << "Instead, use this handy global log function" << std::endl;
 

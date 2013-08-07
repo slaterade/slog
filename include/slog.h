@@ -33,20 +33,86 @@
 
 namespace slog {
 
+static const std::string format_date_plus_time = "%Y-%m-%d_%H-%M-%S";
+static const std::string format_time_only = "[%H:%M:%S] ";
+
+/// uses the C library function "strftime" standard format
+/// @param[in] format string specifiers to format the timestamp
+std::string create_timestamp( const std::string& format ) {
+	if ( format.empty() ) {
+		return "";
+	}
+	std::time_t now_c = std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() );
+	std::stringstream ss;
+	ss << std::put_time( std::localtime( &now_c ), format.c_str() );
+	return ss.str();
+}
+
+/// splits a file name into its base and extention
+/// @param[in] file_name_in the original file name
+/// @param[out] stripped_file_name_out the file name minus its extention
+/// @param[out] extention_out the file extention
+void remove_extention(
+	const std::string& file_name_in,
+	std::string& stripped_file_name_out,
+	std::string& extention_out ) {
+
+	size_t period_pos = file_name_in.find_last_of( "." );
+	if ( period_pos != std::string::npos ) {
+		extention_out = file_name_in.substr( period_pos );
+	}
+	stripped_file_name_out = file_name_in.substr( 0, period_pos );
+}
+
+/// make a binary copy of one file to a new filename
+/// @param[in] source_file_name the source file name
+/// @param[in] destination_file_name the destination file name
+void copy_file( const std::string& source_file_name, const std::string& destination_file_name ) {
+	std::ifstream source( source_file_name.c_str(), std::ios::binary );
+	std::ofstream destination( destination_file_name.c_str(), std::ios::binary );
+	destination << source.rdbuf();
+}
+
 /// provides synchronization, file access, and timestamp mechanisms for the message class
 class logger {
 public:
 
+	/// constructor
+	/// @param[in] log_file_name the log file name
+	logger( const std::string& log_file_name = "slog.txt" )
+		: m_is_initialized( false )
+		, m_is_archiving_enabled( false )
+		, m_timestamp_format( "" )
+		, m_log_file_name( log_file_name ) {
+	}
+
+	/// destructor
+	~logger() {
+		if ( m_is_archiving_enabled && m_log_file.is_open() ) {
+			m_log_file.close();
+			std::string archive_file_name;
+			std::string extention;
+			remove_extention( m_log_file_name, archive_file_name, extention );
+			archive_file_name += "_" + create_timestamp( format_date_plus_time ) + extention;
+			copy_file( m_log_file_name, archive_file_name );
+		}
+	}
+
 	/// open a log file for output
 	/// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
 	void init( const std::string& log_file_name ) {
-		m_log_file.open( log_file_name.c_str(), std::ios::trunc | std::ios::out );
+		m_log_file_name = log_file_name;
+		m_log_file.open( m_log_file_name.c_str(), std::ios::trunc | std::ios::out );
+		m_is_initialized = true;
 	}
 
 	/// @param[in] stream a stringstream containing the message to log
 	void capture( std::ostringstream& stream ) {
-		std::string timestamp = create_timestamp();
+		std::string timestamp = create_timestamp( m_timestamp_format );
 		std::lock_guard<std::mutex> lock( m_log_mutex );
+		if ( !m_is_initialized ) {
+			init( m_log_file_name );
+		}
 		if ( m_log_file.good() ) {
 			m_log_file << timestamp << stream.str() << "\n";
 		}
@@ -56,20 +122,17 @@ public:
 		m_timestamp_format = timestamp_format;
 	}
 
-private:
-	std::string create_timestamp() {
-		if ( m_timestamp_format.empty() ) {
-			return "";
-		}
-		std::time_t now_c = std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() );
-		std::stringstream ss;
-		ss << "[" << std::put_time( std::localtime( &now_c ), m_timestamp_format.c_str() ) << "] ";
-		return ss.str();
+	void set_archiving( bool is_archiving_enabled = true ) {
+		m_is_archiving_enabled = is_archiving_enabled;
 	}
 
+private:
+	bool m_is_initialized;
+	bool m_is_archiving_enabled;
 	std::ofstream m_log_file;
 	std::mutex m_log_mutex;
 	std::string m_timestamp_format;
+	std::string m_log_file_name;
 };
 
 /// acts as a stream to capture a log message
@@ -129,15 +192,22 @@ message out( logger& the_logger = global_logger::get() ) {
 /// initialize the logging system by setting a output file path
 /// @param[in] log_file_name a full file path (e.g. "c:/test/superlog.txt" or "funlog.txt" )
 /// @param[in] the_logger logger object to initialize
-void init( const std::string& log_file_name = "slog.txt", logger& the_logger = global_logger::get() ) {
+void init( const std::string& log_file_name, logger& the_logger = global_logger::get() ) {
 	the_logger.init( log_file_name );
 }
 
-static const std::string format_date_plus_time = "%Y-%m-%d %H:%M:%S";
-static const std::string format_time_only = "%H:%M:%S";
-
-void set_timestamp_format( const std::string& format = format_date_plus_time, logger& the_logger = global_logger::get() ) {
+/// uses the C library function "strftime" standard format
+/// @param[in] format string specifiers to format the timestamp
+/// @param[in[ the_logger the logger object which to set
+void set_timestamp_format( const std::string& format = format_time_only, logger& the_logger = global_logger::get() ) {
 	the_logger.set_timestamp_format( format );
+}
+
+/// if enabled, each time the application closes the log file will be saved with a timestamp
+/// @param[in] is_archiving_enabled set to true to enable archiving
+/// @param[in[ the_logger the logger object which to set
+void set_archiving( bool is_archiving_enabled = true, logger& the_logger = global_logger::get() ) {
+	the_logger.set_archiving( is_archiving_enabled );
 }
 
 /// ever wanted to redirect std::cout to a log file? well this is the class for you.
