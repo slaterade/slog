@@ -11,7 +11,7 @@ Example 1 - The bare minimum.
         slog::out() << "Hello World, the answer to life the universe and everything is " << 42;
     }
     
-Example 2 - A couple convenient features.
+Example 2 - A couple convenient features
 
     #include "slog.h"
     
@@ -21,15 +21,16 @@ Example 2 - A couple convenient features.
         slog::set_archiving();
         
         slog::info() << "Application version 1.0 initialized.";
-        slog::warning() << "Memory low.";
+        slog::warn() << "Memory low.";
         slog::error() << "Mistakes were made... error " << 37;
+        slog::debug() << std::hex << 12345;
         
         slog::out( "DebugForFun" ) << "This message has a custom context tag.";
     }
 
 Perhaps you already have a large project that has many statements that output to a common stream like std::cout, well a special "snooper" utility is available just for that case.
 
-Example 3
+Example 3 - Passive stream interception
 
     #include "slog.h"
     
