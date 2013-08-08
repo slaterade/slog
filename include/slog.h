@@ -36,6 +36,17 @@ namespace slog {
 static const std::string format_date_plus_time = "[%Y-%m-%d %H:%M:%S] ";
 static const std::string format_time_only = "[%H:%M:%S] ";
 
+/// not really sure this is the best way
+std::tm localtime( const std::time_t& time ) {
+	std::tm tm_capture;
+#if ( defined(WIN32) || defined(_WIN32) || defined(__WIN32__) )
+	localtime_s( &tm_capture, &time ); 
+#else
+	localtime_r( &time, &tm_capture ); // POSIX  
+#endif
+	return tm_capture;
+}
+
 /// uses the C library function "strftime" standard format
 /// @param[in] format string specifiers to format the timestamp
 std::string create_timestamp( const std::string& format ) {
@@ -44,7 +55,8 @@ std::string create_timestamp( const std::string& format ) {
 	}
 	std::time_t now_c = std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() );
 	std::stringstream ss;
-	ss << std::put_time( std::localtime( &now_c ), format.c_str() );
+	tm now_tm = slog::localtime( now_c );
+	ss << std::put_time( &now_tm, format.c_str() );
 	return ss.str();
 }
 
