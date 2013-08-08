@@ -162,8 +162,8 @@ public:
 	/// @param[in] other the right-hand-side message object to cannibalize
 	message( message&& other )
 		: m_owner( other.m_owner )
-		, m_context( std::move( other.m_context ) )
-		, m_stream( other.m_stream.str() ) {
+		, m_stream( other.m_stream.str() )
+		, m_context( std::move( other.m_context ) ) {
 	}
 
 	/// destructor which handles the stream capture
