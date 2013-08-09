@@ -1,7 +1,13 @@
 slog
 ====
-
 Simple C++ log file mechanisms. The "s" could also stand for "stream", "small", or "safe" as in thread-safe.  However, the main purpose of this tiny header file is to drop in a project and start writing logfile messages right away.
+
+install instructions
+====================
+Just download the [slog.h](https://raw.github.com/sudopunk/slog/master/include/slog.h "slog.h") file and include it in your project.
+
+examples
+========
 
 Example 1 - The bare minimum.
 
@@ -44,10 +50,6 @@ Example 3 - Passive stream interception
         std::cout << "That would be great, but we were told to comb the desert so we're combing it!";
     }
     
-install instructions
-====================
-Just download the [slog.h](https://raw.github.com/sudopunk/slog/master/include/slog.h "slog.h") file and include it in your project.
-
 compiler requirements
 =====================
 C++11, tested on the following platforms:
